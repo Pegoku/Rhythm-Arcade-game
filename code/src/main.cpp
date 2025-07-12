@@ -15,60 +15,83 @@
 CRGB leds1[NUM_LEDS];
 CRGB leds2[NUM_LEDS];
 
-int led1_pos=0;
-int led2_pos=0;
+int led1_pos = 0;
+int led2_pos = 0;
 
 int points1 = 0;
 
-void setup() {
-    Serial.begin(115200);
-    delay(1000);
+TM1637Display display(16, 14);
 
-    pinMode(BUTTON1_pin, INPUT_PULLUP);
-    pinMode(BUTTON2_pin, INPUT_PULLUP);
+void setup()
+{
+  Serial.begin(115200);
+  delay(1000);
 
-    FastLED.addLeds<LED_TYPE, LED1_PIN, GRB>(leds1, NUM_LEDS).setCorrection(TypicalLEDStrip);
-    FastLED.addLeds<LED_TYPE, LED2_PIN, GRB>(leds2, NUM_LEDS).setCorrection(TypicalLEDStrip);
-    FastLED.setBrightness(BRIGHTNESS);
+  pinMode(BUTTON1_pin, INPUT_PULLUP);
+  pinMode(BUTTON2_pin, INPUT_PULLUP);
 
-    Serial.println("Setup complete");
+  FastLED.addLeds<LED_TYPE, LED1_PIN, GRB>(leds1, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, LED2_PIN, GRB>(leds2, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(BRIGHTNESS);
+
+  display.setBrightness(0x0f);
+  display.clear();
+  display.showNumberDec(points1);
+  
+  Serial.println("Setup complete");
 }
 
-void loop() {
-    // for (int i = 0; i < NUM_LEDS; i++) {
-    //     fill_solid(leds1, NUM_LEDS, CRGB::Black);
-    //     leds1[i] = CRGB::Red;
-    //     FastLED.show();
-    //     delay(500);
-    //     fill_solid(leds2, NUM_LEDS, CRGB::Black);
-    //     leds2[i] = CRGB::Blue;
-    //     FastLED.show();
-    //     delay(500);
+void loop()
+{
+  int button1Pressed = 0;
+  // Clear LEDs
+  fill_solid(leds1, NUM_LEDS, CRGB::Black);
+  FastLED.show();
 
-    for (int i = 0; i < NUM_LEDS; i++) {
-        leds1[i] = CRGB::Red;
-        led1_pos = (i + 1);
-        FastLED.show();
-        
-        static unsigned long lastTime = 0;
-        static int last_i = -1;
+  // Last to First LED
+  for (int idx = NUM_LEDS - 1; idx >= 0; idx--)
+  {
+    fill_solid(leds1, NUM_LEDS, CRGB::Black);
+    leds1[idx] = CRGB::Red;
+    FastLED.show();
 
-        if (i != last_i) {
-            lastTime = millis();
-            last_i = i;
+    unsigned long startTime = millis();
+    bool scored = false;
+
+    // Wait for button press
+    while (millis() - startTime < 200)
+    {
+      if (digitalRead(BUTTON1_pin) == LOW)
+      {
+        button1Pressed++;
+        if (idx == 0)
+        {
+          points1 += 2;
         }
-
-        while (millis() - lastTime < 500) {
-            if (digitalRead(BUTTON1_pin) == LOW) {
-                if (led1_pos == 1) {
-              points1 += 2;
-                } else if (led1_pos == 2) {
-              points1 += 1;
-                } else {
-              points1 -= 2;
-                }
-            }
-            return;
+        else if (idx == 1)
+        {
+          points1 += 1;
         }
+        else
+        {
+          points1 -= 2;
+        }
+        scored = true;
+        break;
+      }
+      delay(10);
     }
+
+    if (scored)
+      break;
+  }
+  if (button1Pressed == 0)
+  {
+    points1 -= 2;
+  }
+
+  // Display points
+  display.showNumberDec(points1);
+  Serial.println(points1); 
+  delay(1000);
 }
