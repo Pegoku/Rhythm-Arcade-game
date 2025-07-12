@@ -3,10 +3,14 @@
 #include <TM1637Display.h>
 
 #define LED1_PIN 2
-#define LED2_PIN 5
+#define LED2_PIN 23
+#define LED3_PIN 18
+#define LED4_PIN 19
 
-#define BUTTON1_pin 0
-#define BUTTON2_pin 4
+#define BUTTON1_PIN 0
+#define BUTTON2_PIN 4
+#define BUTTON3_PIN 16
+#define BUTTON4_PIN 21
 
 #define NUM_LEDS 5
 #define BRIGHTNESS 20
@@ -14,25 +18,36 @@
 
 CRGB leds1[NUM_LEDS];
 CRGB leds2[NUM_LEDS];
+CRGB leds3[NUM_LEDS];
+CRGB leds4[NUM_LEDS];
 
 int led1_pos = 0;
 int led2_pos = 0;
+int led3_pos = 0;
+int led4_pos = 0;
 
 int points1 = 0;
 
-TM1637Display display(16, 14);
+TM1637Display display(17, 5);
 
 void setup()
 {
   Serial.begin(115200);
   delay(1000);
 
-  pinMode(BUTTON1_pin, INPUT_PULLUP);
-  pinMode(BUTTON2_pin, INPUT_PULLUP);
+  pinMode(BUTTON1_PIN, INPUT_PULLUP);
+  pinMode(BUTTON2_PIN, INPUT_PULLUP);
+  pinMode(BUTTON3_PIN, INPUT_PULLUP);
+  pinMode(BUTTON4_PIN, INPUT_PULLUP);
 
   FastLED.addLeds<LED_TYPE, LED1_PIN, GRB>(leds1, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.addLeds<LED_TYPE, LED2_PIN, GRB>(leds2, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, LED3_PIN, GRB>(leds3, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.addLeds<LED_TYPE, LED4_PIN, GRB>(leds4, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
+
+  // seed the RNG for variable speed and strip choice
+  randomSeed(micros());
 
   display.setBrightness(0x0f);
   display.clear();
@@ -43,55 +58,83 @@ void setup()
 
 void loop()
 {
-  int button1Pressed = 0;
-  // Clear LEDs
-  fill_solid(leds1, NUM_LEDS, CRGB::Black);
+
+  // random leds and button
+  int stripIndex = random(0, 4);
+  CRGB* currentLeds;
+  uint8_t buttonPin;
+  CRGB activeColor;
+
+  switch (stripIndex) {
+    case 0:
+      currentLeds = leds1;
+      buttonPin = BUTTON1_PIN;
+      activeColor = CRGB::Red;
+      break;
+    case 1:
+      currentLeds = leds2;
+      buttonPin = BUTTON2_PIN;
+      activeColor = CRGB::Green;
+      break;
+    case 2:
+      currentLeds = leds3;
+      buttonPin = BUTTON3_PIN;
+      activeColor = CRGB::Blue;
+      break;
+    case 3:
+      currentLeds = leds4;
+      buttonPin = BUTTON4_PIN;
+      activeColor = CRGB::Yellow;
+      break;
+  }
+
+  // random delay between steps (150ms–500ms)
+  unsigned long timeout = random(150, 501);
+
+  int buttonPressed = 0;
+  fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
   FastLED.show();
 
-  // Last to First LED
+  // scan from last to first
   for (int idx = NUM_LEDS - 1; idx >= 0; idx--)
   {
-    fill_solid(leds1, NUM_LEDS, CRGB::Black);
-    leds1[idx] = CRGB::Red;
+    fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
+    currentLeds[idx] = activeColor;
     FastLED.show();
 
     unsigned long startTime = millis();
     bool scored = false;
 
-    // Wait for button press
-    while (millis() - startTime < 200)
+    // button press detection
+    while (millis() - startTime < timeout)
     {
-      if (digitalRead(BUTTON1_pin) == LOW)
+      if (digitalRead(buttonPin) == LOW)
       {
-        button1Pressed++;
+        buttonPressed++;
         if (idx == 0)
-        {
           points1 += 2;
-        }
         else if (idx == 1)
-        {
           points1 += 1;
-        }
         else
-        {
           points1 -= 2;
-        }
         scored = true;
         break;
       }
       delay(10);
     }
 
-    if (scored)
+    if (scored) 
       break;
   }
-  if (button1Pressed == 0)
-  {
-    points1 -= 2;
-  }
 
-  // Display points
+  if (buttonPressed == 0)
+    points1 -= 2;
+
+  // display results
   display.showNumberDec(points1);
-  Serial.println(points1); 
+  Serial.println(points1);
+  fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
   delay(1000);
+
 }
