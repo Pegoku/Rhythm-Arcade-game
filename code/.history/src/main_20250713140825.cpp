@@ -32,13 +32,10 @@ int led3_pos = 0;
 int led4_pos = 0;
 
 int points1 = 0;
-int bestScore = 100;
-int nameBestScore = 0;
+int bestScore = 0;
 
 TM1637Display display(17, 5);
 TM1637Display display2(13, 14);
-TM1637Display display3(22, 15); // Additional display for character control
-
 
 // Variables for character control
 char characters[4] = {'A', 'B', 'C', 'D'}; // Initial characters
@@ -104,12 +101,7 @@ void setup()
   
   display2.setBrightness(0x0f);
   display2.clear();
-  display2.showNumberDec(bestScore); // Initialize display2 with bestScore
-
-  display3.setBrightness(0x0f);
-  display3.clear();
-  uint8_t seg = letterEncoding[characters[nameBestScore]];
-  display3.setSegments(&seg, 1); // Initialize display3 with the first character
+  display2.showNumberDec(8888); // Initialize display2 with 8888
 
   Serial.println("Setup complete");
 }
@@ -215,9 +207,8 @@ void loop()
   Serial.println(points1);
   fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
   FastLED.show();
-  delay(0);
-  
-  // END GAME (after )
+  delay(1000);
+  */
 
   // Button handling for display2
   if (digitalRead(BUTTON_UP_PIN) == LOW) { // Up button

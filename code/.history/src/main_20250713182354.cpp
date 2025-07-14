@@ -32,8 +32,8 @@ int led3_pos = 0;
 int led4_pos = 0;
 
 int points1 = 0;
-int bestScore = 100;
-int nameBestScore = 0;
+int bestScore = 0;
+String nameBestScore = "AAAA";
 
 TM1637Display display(17, 5);
 TM1637Display display2(13, 14);
@@ -108,8 +108,7 @@ void setup()
 
   display3.setBrightness(0x0f);
   display3.clear();
-  uint8_t seg = letterEncoding[characters[nameBestScore]];
-  display3.setSegments(&seg, 1); // Initialize display3 with the first character
+  display3.setSegments(etterEncoding[characters[0]]); // Initialize display3 with characters
 
   Serial.println("Setup complete");
 }

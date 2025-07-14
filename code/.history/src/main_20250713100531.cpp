@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include <FastLED.h>
 #include <TM1637Display.h>
-#include <map>
 
 #define LED1_PIN 2
 #define LED2_PIN 23
@@ -32,48 +31,14 @@ int led3_pos = 0;
 int led4_pos = 0;
 
 int points1 = 0;
-int bestScore = 100;
-int nameBestScore = 0;
+int bestScore = 0;
 
 TM1637Display display(17, 5);
 TM1637Display display2(13, 14);
-TM1637Display display3(22, 15); // Additional display for character control
-
 
 // Variables for character control
 char characters[4] = {'A', 'B', 'C', 'D'}; // Initial characters
 int selectedIndex = 0; // Index of the currently selected character
-
-// 7-segment encodings for common letters (A-Z, limited by display capability)
-std::map<char, uint8_t> letterEncoding = {
-  {'A', 0b01110111},
-  {'B', 0b01111100}, // b
-  {'C', 0b00111001},
-  {'D', 0b01011110}, // d
-  {'E', 0b01111001},
-  {'F', 0b01110001},
-  {'G', 0b00111101},
-  {'H', 0b01110110},
-  {'I', 0b00110000},
-  {'J', 0b00011110},
-  {'K', 0b01110110}, // Same as H
-  {'L', 0b00111000},
-  {'M', 0b00110111}, // Approximation
-  {'N', 0b01010100},
-  {'O', 0b00111111},
-  {'P', 0b01110011},
-  {'Q', 0b01100111},
-  {'R', 0b01010000},
-  {'S', 0b01101101},
-  {'T', 0b01111000},
-  {'U', 0b00111110},
-  {'V', 0b00111110}, // Same as U
-  {'W', 0b00111110}, // Same as U/V
-  {'X', 0b01110110}, // Same as H/K
-  {'Y', 0b01101110},
-  {'Z', 0b01011011}
-  // Add more as needed, some letters can't be represented well
-};
 
 void setup()
 {
@@ -102,27 +67,16 @@ void setup()
   display.clear();
   display.showNumberDec(points1);
   
-  display2.setBrightness(0x0f);
-  display2.clear();
-  display2.showNumberDec(bestScore); // Initialize display2 with bestScore
 
-  display3.setBrightness(0x0f);
-  display3.clear();
-  uint8_t seg = letterEncoding[characters[nameBestScore]];
-  display3.setSegments(&seg, 1); // Initialize display3 with the first character
-
+  
   Serial.println("Setup complete");
 }
 
 void updateDisplay2() {
-  // Map characters to 7-segment display segments using letterEncoding
+  // Map characters to 7-segment display segments
   uint8_t segments[4];
   for (int i = 0; i < 4; i++) {
-    if (letterEncoding.find(characters[i]) != letterEncoding.end()) {
-      segments[i] = letterEncoding[characters[i]]; // Get the segment encoding from the map
-    } else {
-      segments[i] = 0; // Default to blank if character is not in the map
-    }
+    segments[i] = display2.encodeDigit(characters[i] - 'A'); // Encode character
   }
 
   // Update display2 with the segments
@@ -138,7 +92,7 @@ void updateDisplay2() {
 
 void loop()
 {
-
+  /*
   // random leds and button
   int stripIndex = random(0, 4);
   CRGB* currentLeds;
@@ -215,34 +169,33 @@ void loop()
   Serial.println(points1);
   fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
   FastLED.show();
-  delay(0);
-  
-  // END GAME (after )
+  delay(1000);
+  */
 
-  // Button handling for display2
-  if (digitalRead(BUTTON_UP_PIN) == LOW) { // Up button
-    characters[selectedIndex]++;
-    if (characters[selectedIndex] > 'Z') characters[selectedIndex] = 'A'; // Wrap around
-    updateDisplay2();
-    delay(200); // Debounce delay
-  }
+  // // Button handling for display2
+  // if (digitalRead(BUTTON_UP_PIN) == LOW) { // Up button
+  //   characters[selectedIndex]++;
+  //   if (characters[selectedIndex] > 'Z') characters[selectedIndex] = 'A'; // Wrap around
+  //   updateDisplay2();
+  //   delay(200); // Debounce delay
+  // }
 
-  if (digitalRead(BUTTON_DOWN_PIN) == LOW) { // Down button
-    characters[selectedIndex]--;
-    if (characters[selectedIndex] < 'A') characters[selectedIndex] = 'Z'; // Wrap around
-    updateDisplay2();
-    delay(200); // Debounce delay
-  }
+  // if (digitalRead(BUTTON_DOWN_PIN) == LOW) { // Down button
+  //   characters[selectedIndex]--;
+  //   if (characters[selectedIndex] < 'A') characters[selectedIndex] = 'Z'; // Wrap around
+  //   updateDisplay2();
+  //   delay(200); // Debounce delay
+  // }
 
-  if (digitalRead(BUTTON_RIGHT_PIN) == LOW) { // Right button
-    selectedIndex = (selectedIndex + 1) % 4; // Move to the next character
-    updateDisplay2();
-    delay(200); // Debounce delay
-  }
+  // if (digitalRead(BUTTON_RIGHT_PIN) == LOW) { // Right button
+  //   selectedIndex = (selectedIndex + 1) % 4; // Move to the next character
+  //   updateDisplay2();
+  //   delay(200); // Debounce delay
+  // }
 
-  if (digitalRead(BUTTON_LEFT_PIN) == LOW) { // Left button
-    selectedIndex = (selectedIndex - 1 + 4) % 4; // Move to the previous character
-    updateDisplay2();
-    delay(200); // Debounce delay
-  }
+  // if (digitalRead(BUTTON_LEFT_PIN) == LOW) { // Left button
+  //   selectedIndex = (selectedIndex - 1 + 4) % 4; // Move to the previous character
+  //   updateDisplay2();
+  //   delay(200); // Debounce delay
+  // }
 }

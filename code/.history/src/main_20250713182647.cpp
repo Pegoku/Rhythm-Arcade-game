@@ -32,7 +32,7 @@ int led3_pos = 0;
 int led4_pos = 0;
 
 int points1 = 0;
-int bestScore = 100;
+int bestScore = 0;
 int nameBestScore = 0;
 
 TM1637Display display(17, 5);

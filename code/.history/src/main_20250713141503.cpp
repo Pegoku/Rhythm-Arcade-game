@@ -2,6 +2,7 @@
 #include <FastLED.h>
 #include <TM1637Display.h>
 #include <map>
+#include <Wire.h> // Include Wire library for I2C communication
 
 #define LED1_PIN 2
 #define LED2_PIN 23
@@ -32,13 +33,10 @@ int led3_pos = 0;
 int led4_pos = 0;
 
 int points1 = 0;
-int bestScore = 100;
-int nameBestScore = 0;
+int bestScore = 0;
 
 TM1637Display display(17, 5);
 TM1637Display display2(13, 14);
-TM1637Display display3(22, 15); // Additional display for character control
-
 
 // Variables for character control
 char characters[4] = {'A', 'B', 'C', 'D'}; // Initial characters
@@ -75,19 +73,25 @@ std::map<char, uint8_t> letterEncoding = {
   // Add more as needed, some letters can't be represented well
 };
 
+#define IO_EXPANDER_ADDRESS 0x08 // I2C address of the IO expander
+
+// Helper function to get the status of a button from the IO expander
+bool statusButtonIO(uint8_t buttonNumber) {
+  Wire.requestFrom(IO_EXPANDER_ADDRESS, 2); // Request 2 bytes from the IO expander
+  if (Wire.available() >= 2) {
+    uint16_t buttonStates = Wire.read(); // Read the first byte
+    buttonStates |= (Wire.read() << 8);  // Read the second byte and combine
+    return (buttonStates >> buttonNumber) & 0x01; // Return the state of the specified button
+  }
+  return false; // Default to false if no data is available
+}
+
 void setup()
 {
   Serial.begin(115200);
   delay(1000);
 
-  pinMode(BUTTON1_PIN, INPUT_PULLUP);
-  pinMode(BUTTON2_PIN, INPUT_PULLUP);
-  pinMode(BUTTON3_PIN, INPUT_PULLUP);
-  pinMode(BUTTON4_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_RIGHT_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_LEFT_PIN, INPUT_PULLUP);
+  Wire.begin(); // Initialize I2C communication
 
   FastLED.addLeds<LED_TYPE, LED1_PIN, GRB>(leds1, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.addLeds<LED_TYPE, LED2_PIN, GRB>(leds2, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -104,12 +108,7 @@ void setup()
   
   display2.setBrightness(0x0f);
   display2.clear();
-  display2.showNumberDec(bestScore); // Initialize display2 with bestScore
-
-  display3.setBrightness(0x0f);
-  display3.clear();
-  uint8_t seg = letterEncoding[characters[nameBestScore]];
-  display3.setSegments(&seg, 1); // Initialize display3 with the first character
+  display2.showNumberDec(8888); // Initialize display2 with 8888
 
   Serial.println("Setup complete");
 }
@@ -215,32 +214,31 @@ void loop()
   Serial.println(points1);
   fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
   FastLED.show();
-  delay(0);
+  delay(1000);
   
-  // END GAME (after )
 
-  // Button handling for display2
-  if (digitalRead(BUTTON_UP_PIN) == LOW) { // Up button
+  // Button handling for display2 using IO expander
+  if (statusButtonIO(4)) { // Up button
     characters[selectedIndex]++;
     if (characters[selectedIndex] > 'Z') characters[selectedIndex] = 'A'; // Wrap around
     updateDisplay2();
     delay(200); // Debounce delay
   }
 
-  if (digitalRead(BUTTON_DOWN_PIN) == LOW) { // Down button
+  if (statusButtonIO(1)) { // Down button
     characters[selectedIndex]--;
     if (characters[selectedIndex] < 'A') characters[selectedIndex] = 'Z'; // Wrap around
     updateDisplay2();
     delay(200); // Debounce delay
   }
 
-  if (digitalRead(BUTTON_RIGHT_PIN) == LOW) { // Right button
+  if (statusButtonIO(2)) { // Right button
     selectedIndex = (selectedIndex + 1) % 4; // Move to the next character
     updateDisplay2();
     delay(200); // Debounce delay
   }
 
-  if (digitalRead(BUTTON_LEFT_PIN) == LOW) { // Left button
+  if (statusButtonIO(3)) { // Left button
     selectedIndex = (selectedIndex - 1 + 4) % 4; // Move to the previous character
     updateDisplay2();
     delay(200); // Debounce delay

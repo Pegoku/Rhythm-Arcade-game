@@ -2,6 +2,7 @@
 #include <FastLED.h>
 #include <TM1637Display.h>
 #include <map>
+#include <Wire.h> // Include Wire library for I2C communication
 
 #define LED1_PIN 2
 #define LED2_PIN 23
@@ -32,13 +33,10 @@ int led3_pos = 0;
 int led4_pos = 0;
 
 int points1 = 0;
-int bestScore = 100;
-int nameBestScore = 0;
+int bestScore = 0;
 
 TM1637Display display(17, 5);
 TM1637Display display2(13, 14);
-TM1637Display display3(22, 15); // Additional display for character control
-
 
 // Variables for character control
 char characters[4] = {'A', 'B', 'C', 'D'}; // Initial characters
@@ -75,19 +73,25 @@ std::map<char, uint8_t> letterEncoding = {
   // Add more as needed, some letters can't be represented well
 };
 
+#define IO_EXPANDER_ADDRESS 0x08 // I2C address of the IO expander
+
+// Helper function to get the status of a button from the IO expander
+bool statusButtonIO(uint8_t buttonNumber) {
+  Wire.requestFrom(IO_EXPANDER_ADDRESS, 2); // Request 2 bytes from the IO expander
+  if (Wire.available() >= 2) {
+    uint16_t buttonStates = Wire.read(); // Read the first byte
+    buttonStates |= (Wire.read() << 8);  // Read the second byte and combine
+    return (buttonStates >> buttonNumber) & 0x01; // Return the state of the specified button
+  }
+  return false; // Default to false if no data is available
+}
+
 void setup()
 {
   Serial.begin(115200);
   delay(1000);
 
-  pinMode(BUTTON1_PIN, INPUT_PULLUP);
-  pinMode(BUTTON2_PIN, INPUT_PULLUP);
-  pinMode(BUTTON3_PIN, INPUT_PULLUP);
-  pinMode(BUTTON4_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_UP_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_DOWN_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_RIGHT_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_LEFT_PIN, INPUT_PULLUP);
+  Wire.begin(); // Initialize I2C communication
 
   FastLED.addLeds<LED_TYPE, LED1_PIN, GRB>(leds1, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.addLeds<LED_TYPE, LED2_PIN, GRB>(leds2, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -104,12 +108,7 @@ void setup()
   
   display2.setBrightness(0x0f);
   display2.clear();
-  display2.showNumberDec(bestScore); // Initialize display2 with bestScore
-
-  display3.setBrightness(0x0f);
-  display3.clear();
-  uint8_t seg = letterEncoding[characters[nameBestScore]];
-  display3.setSegments(&seg, 1); // Initialize display3 with the first character
+  display2.showNumberDec(8888); // Initialize display2 with 8888
 
   Serial.println("Setup complete");
 }
@@ -148,22 +147,22 @@ void loop()
   switch (stripIndex) {
     case 0:
       currentLeds = leds1;
-      buttonPin = BUTTON1_PIN;
+      buttonPin = 6;
       activeColor = CRGB::Red;
       break;
     case 1:
       currentLeds = leds2;
-      buttonPin = BUTTON2_PIN;
+      buttonPin = 7;
       activeColor = CRGB::Green;
       break;
     case 2:
       currentLeds = leds3;
-      buttonPin = BUTTON3_PIN;
+      buttonPin = 8;
       activeColor = CRGB::Blue;
       break;
     case 3:
       currentLeds = leds4;
-      buttonPin = BUTTON4_PIN;
+      buttonPin = 9;
       activeColor = CRGB::Yellow;
       break;
   }
@@ -188,7 +187,7 @@ void loop()
     // button press detection
     while (millis() - startTime < timeout)
     {
-      if (digitalRead(buttonPin) == LOW)
+      if (statusButtonIO(buttonPin) == 0)
       {
         buttonPressed++;
         if (idx == 0)
@@ -215,34 +214,78 @@ void loop()
   Serial.println(points1);
   fill_solid(currentLeds, NUM_LEDS, CRGB::Black);
   FastLED.show();
-  delay(0);
+  delay(1000);
   
-  // END GAME (after )
 
-  // Button handling for display2
-  if (digitalRead(BUTTON_UP_PIN) == LOW) { // Up button
+  // Button handling for display2 using IO expander
+  if (statusButtonIO(4)) { // Up button
     characters[selectedIndex]++;
     if (characters[selectedIndex] > 'Z') characters[selectedIndex] = 'A'; // Wrap around
     updateDisplay2();
     delay(200); // Debounce delay
   }
 
-  if (digitalRead(BUTTON_DOWN_PIN) == LOW) { // Down button
+  if (statusButtonIO(5)) { // Down button
     characters[selectedIndex]--;
     if (characters[selectedIndex] < 'A') characters[selectedIndex] = 'Z'; // Wrap around
     updateDisplay2();
     delay(200); // Debounce delay
   }
 
-  if (digitalRead(BUTTON_RIGHT_PIN) == LOW) { // Right button
+  if (statusButtonIO(3)) { // Right button
     selectedIndex = (selectedIndex + 1) % 4; // Move to the next character
     updateDisplay2();
     delay(200); // Debounce delay
   }
 
-  if (digitalRead(BUTTON_LEFT_PIN) == LOW) { // Left button
+  if (statusButtonIO(2)) { // Left button
     selectedIndex = (selectedIndex - 1 + 4) % 4; // Move to the previous character
     updateDisplay2();
     delay(200); // Debounce delay
   }
 }
+
+#include <Arduino.h>
+#include <Wire.h> // Include the Wire library for I2C communication
+
+#define IO_EXPANDER_ADDRESS 0x08 // I2C address of the IO expander
+
+uint16_t lastButtonStates = 0; // Store last 16 button states
+
+void setup()
+{
+  Wire.begin();       // Initialize I2C as master
+  Serial.begin(115200); // Initialize serial communication for debugging
+}
+
+uint16_t readButtonStates()
+{
+  Wire.requestFrom(IO_EXPANDER_ADDRESS, (uint8_t)2); // Request 2 bytes from the IO expander
+  if (Wire.available() >= 2)
+  {
+    uint8_t lowByte = Wire.read();   // Read the first byte (LSB)
+    uint8_t highByte = Wire.read();  // Read the second byte (MSB)
+    return (highByte << 8) | lowByte; // Combine bytes into a 16-bit value
+  }
+  return 0; // Return 0 if no data is available
+}
+
+void loop()
+{
+  uint16_t currentStates = readButtonStates(); // Read all 16 button states
+  for (uint8_t buttonNumber = 0; buttonNumber < 16; buttonNumber++) // Iterate through all 16 buttons
+  {
+    bool lastState = (lastButtonStates >> buttonNumber) & 0x01; // Extract the last state of the button
+    bool currentState = (currentStates >> buttonNumber) & 0x01; // Extract the current state of the button
+    if (lastState != currentState) // Check if the state has changed
+    {
+      Serial.print("Button ");
+      Serial.print(buttonNumber + 1); // Correctly display button numbers starting from 1
+      Serial.print(": ");
+      Serial.println(currentState ? "Pressed" : "Released");
+    }
+  }
+  lastButtonStates = currentStates; // Update the last button states
+  delay(10); // Wait for 10ms before the next request
+}
+
