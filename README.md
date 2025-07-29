@@ -9,6 +9,7 @@ It uses an esp32, 7-segment display, a few buttons and neopixels (WS2812B).
 We made this project for Undercity, a hardware hackathon in SF, CA. The goal was to make a fun game that people could play and to have a fun time making it.
 
 ## Problems with the design and construction
+
 - LONG printing queue for the 3d printers
 - Failed 3d print of the case, we were unable to reprint it in time
 - the wires breaking and disconnecting
@@ -23,12 +24,23 @@ We made this project for Undercity, a hardware hackathon in SF, CA. The goal was
 ![Final](assets/final.jpg)
 
 <details>
-  <summary>electronics</summary>
+  <summary>IRL Electronics</summary>
   
 ![schematic](assets/electronics.jpg)
 
 </details>
 
+<details>
+  <summary>Wiring Diagram / Schematic</summary>
+  
+![wiring_diagram](assets/wiring.png)
+</details>
+
+<details>
+  <summary>3D Model</summary>
+
+![3d_model](assets/cad.png)
+</details>
 ## BOM
 
 | Component          | Quantity |
