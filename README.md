@@ -41,6 +41,7 @@ We made this project for Undercity, a hardware hackathon in SF, CA. The goal was
 
 ![3d_model](assets/cad.png)
 </details>
+
 ## BOM
 
 | Component          | Quantity |
